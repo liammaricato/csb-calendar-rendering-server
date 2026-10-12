@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>CSB — Calendário de Treinos</title>
+<!--
+  Template for the monthly calendar of Clube Santista de Badminton.
+
+  How it works:
+  - The page is plain static HTML showing a sample month, so this file can be
+    opened straight in the browser for a preview.
+  - server.js injects window.CSB_DATA (and swaps the font and logo paths for
+    embedded versions). When it exists, the script at the bottom replaces only
+    the month name and the rows; header, subtitle and footer are always fixed.
+  - Rows are cloned from the first sample row and filled with textContent, so
+    nothing coming from the data is ever inserted as HTML.
+  - Once fonts and logo are loaded, it sets window.CSB_READY = true.
+-->
+<style>
+  @font-face {
+    font-family: 'Montserrat';
+    src: url('./fonts/Montserrat.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+  }
+  :root {
+    --navy: #0B2F6B;
+    --blue: #1565D8;
+    --light-blue: #E3EEFC;
+    --bg: #F5F9FE;
+    --text-secondary: #24406E;
+    --gray-row: #E9EEF5;
+    --gray-date: #9FB3CF;
+    --gray-divider: #B5C4D8;
+    --gray-text: #6B7F9C;
+    --green: #1E9E5A;
+    --orange: #C2410C;
+  }
+  html, body { margin: 0; background: #FFFFFF; }
+  #art {
+    width: 1080px;
+    min-height: 1080px;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+    font-family: 'Montserrat', sans-serif;
+    color: var(--navy);
+    display: flex;
+  }
+  .sprite { display: none; }
+  .bubble { position: absolute; border-radius: 50%; background: var(--light-blue); }
+  .bubble.top { top: -260px; right: -220px; width: 620px; height: 620px; }
+  .bubble.bottom { bottom: -300px; left: -260px; width: 640px; height: 640px; }
+
+  .content {
+    position: relative; flex: 1; box-sizing: border-box;
+    padding: 48px 72px; display: flex; flex-direction: column; gap: 44px;
+  }
+
+  /* Header */
+  .header { display: flex; align-items: center; gap: 40px; }
+  .logo {
+    width: 230px; height: 230px; object-fit: contain; border-radius: 50%;
+    background: #FFFFFF; flex-shrink: 0; mix-blend-mode: multiply;
+  }
+  .bar { width: 4px; align-self: stretch; background: var(--navy); border-radius: 2px; }
+  .titles { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .overline { font-size: 22px; font-weight: 700; letter-spacing: 6px; color: var(--blue); }
+  .month { font-size: 112px; font-weight: 900; line-height: 0.9; letter-spacing: -2px; color: var(--navy); white-space: nowrap; }
+  .subtitle { font-size: 20px; font-weight: 600; letter-spacing: 5px; color: var(--navy); }
+
+  /* Calendar rows */
+  .list { display: flex; flex-direction: column; gap: 22px; }
+  .row { display: flex; min-height: 140px; border-radius: 22px; overflow: hidden; background: var(--light-blue); }
+  .date {
+    width: 200px; flex-shrink: 0; background: var(--navy); color: #FFFFFF;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  }
+  .date .dm { font-size: 52px; font-weight: 800; line-height: 1; }
+  .date .wd { font-size: 20px; font-weight: 700; letter-spacing: 2px; }
+  .body { flex: 1; display: flex; align-items: center; gap: 28px; padding: 18px 36px; min-width: 0; }
+  .divider { width: 3px; height: 72px; background: var(--navy); border-radius: 2px; flex-shrink: 0; }
+  .icon { width: 68px; height: 68px; flex-shrink: 0; color: var(--blue); }
+  .texts { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .title { font-size: 34px; font-weight: 800; color: var(--navy); line-height: 1.15; }
+  .description { font-size: 22px; font-weight: 500; color: var(--text-secondary); line-height: 1.3; }
+  .description:empty { display: none; }
+  /* Every row carries both badges; the status class decides which one shows. */
+  .badge {
+    width: 62px; height: 62px; border-radius: 50%; flex-shrink: 0;
+    display: none; align-items: center; justify-content: center;
+  }
+  .badge svg { width: 34px; height: 34px; }
+  .badge-done { background: var(--green); }
+  .badge-cancelled { background: var(--orange); }
+  .badge-cancelled svg { width: 30px; height: 30px; }
+  .row.done .badge-done, .row.cancelled .badge-cancelled { display: flex; }
+
+  /* Status: highlight (next practice) */
+  .row.highlight .date { background: var(--blue); }
+
+  /* Status: done and cancelled (grayed out) */
+  .row.done, .row.cancelled { background: var(--gray-row); }
+  .row.done .date, .row.cancelled .date { background: var(--gray-date); }
+  .row.done .divider, .row.cancelled .divider { background: var(--gray-divider); }
+  .row.done .icon, .row.cancelled .icon { color: var(--gray-date); }
+  .row.done .title, .row.cancelled .title {
+    color: var(--gray-text); text-decoration: line-through; text-decoration-thickness: 3px;
+  }
+  .row.done .description, .row.cancelled .description { color: var(--gray-text); }
+
+  /* Footer */
+  .footer {
+    margin-top: auto; border-radius: 24px; background: var(--navy); color: #FFFFFF;
+    padding: 30px 40px; display: flex; flex-direction: column; gap: 22px;
+  }
+  .footer-top { display: flex; align-items: center; gap: 18px; }
+  .footer-top svg { width: 40px; height: 40px; flex-shrink: 0; }
+  .footer-texts { display: flex; flex-direction: column; gap: 4px; }
+  .footer-title { font-size: 24px; font-weight: 800; letter-spacing: 1px; }
+  .footer-sub { font-size: 18px; font-weight: 500; color: #C9DBF5; }
+  .rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  .rule {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 16px 22px; border-radius: 16px; background: #163F82;
+  }
+  .rule-people { font-size: 22px; font-weight: 600; }
+  .rule-people b { font-size: 32px; font-weight: 900; }
+  .rule-courts {
+    padding: 10px 18px; border-radius: 999px; background: var(--light-blue);
+    color: var(--navy); font-size: 18px; font-weight: 800; white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<!-- Icons, referenced by the rows with <use href="#icon-...">. The row icons use currentColor. -->
+<svg class="sprite" aria-hidden="true">
+  <symbol id="icon-shuttlecock" viewBox="0 0 64 64"><g transform="rotate(32 32 32)"><path d="M23 43 L9.5 14 Q12 4 19.5 9 Q24.5 2 32 7 Q39.5 2 44.5 9 Q52 4 54.5 14 L41 43 Z" fill="currentColor"/><path d="M27 43 L19.5 10 M32 43 L32 8 M37 43 L44.5 10" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" opacity="0.75" fill="none"/><path d="M15.6 27 L48.4 27" stroke="#FFFFFF" stroke-width="2.4" fill="none"/><path d="M21.5 44.5 H42.5 V47 A10.5 10.5 0 0 1 21.5 47 Z" fill="currentColor"/></g></symbol>
+  <symbol id="icon-coffee" viewBox="0 0 64 64"><path d="M22 6 Q18 11 22 16 Q26 21 22 26 M32 4 Q28 9 32 14 Q36 19 32 24 M42 6 Q38 11 42 16 Q46 21 42 26" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M11 31 H49 V40 A15 15 0 0 1 34 55 H26 A15 15 0 0 1 11 40 Z" fill="currentColor"/><path d="M49 34 H52 A7 7 0 0 1 52 48 H47" stroke="currentColor" stroke-width="4" fill="none"/><path d="M8 59 H52" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></symbol>
+  <symbol id="icon-trophy" viewBox="0 0 64 64"><path d="M18 6 H46 V22 A14 14 0 0 1 18 22 Z" fill="currentColor"/><path d="M18 11 H9 V16 A10 10 0 0 0 19 26 M46 11 H55 V16 A10 10 0 0 1 45 26" stroke="currentColor" stroke-width="4" fill="none" stroke-linejoin="round"/><path d="M28 35 H36 V46 H28 Z" fill="currentColor"/><path d="M19 47 H45 V53 H19 Z M15 54 H49 V59 H15 Z" fill="currentColor"/><path d="M32 12 L33.8 16 L38 16.4 L34.8 19.2 L35.8 23.4 L32 21.2 L28.2 23.4 L29.2 19.2 L26 16.4 L30.2 16 Z" fill="#FFFFFF" opacity="0.85"/></symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="icon-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/></symbol>
+</svg>
+
+<div id="art">
+  <div class="bubble top" aria-hidden="true"></div>
+  <div class="bubble bottom" aria-hidden="true"></div>
+
+  <div class="content">
+    <div class="header">
+      <img class="logo" src="./assets/logo-csb.jpg" alt="Logo do Clube Santista de Badminton">
+      <div class="bar"></div>
+      <div class="titles">
+        <div class="overline">CALENDÁRIO DO CSB</div>
+        <div class="month">OUTUBRO</div>
+        <div class="subtitle">TREINOS • EVENTOS • TORNEIOS</div>
+      </div>
+    </div>
+
+    <!-- Sample rows (preview only): replaced when window.CSB_DATA exists. -->
+    <div class="list">
+      <div class="row done">
+        <div class="date"><div class="dm">02/10</div><div class="wd">SEX</div></div>
+        <div class="body">
+          <div class="divider"></div>
+          <svg class="icon" aria-hidden="true"><use href="#icon-shuttlecock"/></svg>
+          <div class="texts"><div class="title">TREINO</div><div class="description"></div></div>
+          <div class="badge badge-done" role="img" aria-label="Realizado"><svg><use href="#icon-check"/></svg></div>
+          <div class="badge badge-cancelled" role="img" aria-label="Cancelado"><svg><use href="#icon-x"/></svg></div>
+        </div>
+      </div>
+      <div class="row highlight">
+        <div class="date"><div class="dm">16/10</div><div class="wd">SEX</div></div>
+        <div class="body">
+          <div class="divider"></div>
+          <svg class="icon" aria-hidden="true"><use href="#icon-shuttlecock"/></svg>
+          <div class="texts"><div class="title">TREINO</div><div class="description">Reforço de movimentação e agilidade</div></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="date"><div class="dm">23/10</div><div class="wd">SEX</div></div>
+        <div class="body">
+          <div class="divider"></div>
+          <svg class="icon" aria-hidden="true"><use href="#icon-shuttlecock"/></svg>
+          <div class="texts"><div class="title">TREINO</div><div class="description"></div></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="date"><div class="dm">24/10</div><div class="wd">SÁB</div></div>
+        <div class="body">
+          <div class="divider"></div>
+          <svg class="icon" aria-hidden="true"><use href="#icon-coffee"/></svg>
+          <div class="texts"><div class="title">CAFÉ &amp; SMASH NO SBB</div><div class="description">O CSB vai participar! Nos organizamos aqui no grupo</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-top">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="9" r="2.4"/><path d="M16.5 13.6c2.6.2 4.5 2 4.5 4.6"/></svg>
+        <div class="footer-texts">
+          <div class="footer-title">QUANTIDADE DE PESSOAS NO TREINO</div>
+          <div class="footer-sub">Define o número de quadras dedicadas</div>
+        </div>
+      </div>
+      <div class="rules">
+        <div class="rule"><div class="rule-people"><b>4+</b> pessoas</div><div class="rule-courts">1 quadra</div></div>
+        <div class="rule"><div class="rule-people"><b>8+</b> pessoas</div><div class="rule-courts">2 quadras</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--CSB_DATA-->
+<script>
+(function () {
+  var WEEKDAYS = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+  var month = document.querySelector('.month');
+  var logo = document.querySelector('.logo');
+  var data = window.CSB_DATA; // already validated by validate.js
+
+  if (data) {
+    month.textContent = data.month;
+    var list = document.querySelector('.list');
+    var model = list.firstElementChild; // the one sample row that has both badges
+    list.textContent = '';
+    data.items.forEach(function (item) {
+      var d = item.date.split('/'); // "16/10/2026" -> ["16", "10", "2026"]
+      var row = model.cloneNode(true);
+      row.className = 'row ' + item.status;
+      row.querySelector('.dm').textContent = d[0] + '/' + d[1];
+      row.querySelector('.wd').textContent = WEEKDAYS[new Date(Date.UTC(d[2], d[1] - 1, d[0])).getUTCDay()];
+      row.querySelector('.icon use').setAttribute('href', '#icon-' + item.icon);
+      row.querySelector('.title').textContent = item.title;
+      row.querySelector('.description').textContent = item.description;
+      list.appendChild(row);
+    });
+  }
+
+  var logoReady = logo.complete ? Promise.resolve() : new Promise(function (ok) { logo.onload = logo.onerror = ok; });
+  Promise.all([document.fonts.ready, logoReady]).then(function () {
+    // Shrinks the month name if it is too long (e.g. "FEVEREIRO 2027").
+    var max = 1080 - 72 * 2 - 230 - 40 - 4 - 40;
+    var size = 112;
+    while (month.scrollWidth > max && size > 60) { size -= 4; month.style.fontSize = size + 'px'; }
+    window.CSB_READY = true;
+  });
+})();
+</script>
+</body>
+</html>

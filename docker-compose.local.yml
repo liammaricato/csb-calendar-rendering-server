@@ -1,0 +1,13 @@
+# Local testing: same image as the VPS, but with the port published only on
+# 127.0.0.1 and without depending on the n8n network.
+#
+#   docker compose -f docker-compose.local.yml up -d --build
+services:
+  csb-render:
+    build: .
+    container_name: csb-render-local
+    environment:
+      - RENDER_TOKEN=${RENDER_TOKEN:-}
+    mem_limit: 768m
+    ports:
+      - "127.0.0.1:3000:3000"

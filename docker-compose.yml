@@ -1,0 +1,16 @@
+# csb-render joins the n8n network and publishes no port at all:
+# only containers on that network can call it, at http://csb-render:3000
+services:
+  csb-render:
+    build: .
+    container_name: csb-render
+    restart: unless-stopped
+    environment:
+      - RENDER_TOKEN=${RENDER_TOKEN:-}
+    mem_limit: 768m
+    networks:
+      - n8n-shared
+
+networks:
+  n8n-shared:
+    external: true

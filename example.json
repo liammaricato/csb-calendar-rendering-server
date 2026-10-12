@@ -1,0 +1,9 @@
+{
+  "month": "NOVEMBRO",
+  "items": [
+    { "date": "06/11/2026", "title": "TREINO", "description": "", "icon": "shuttlecock", "status": "done" },
+    { "date": "13/11/2026", "title": "TREINO", "description": "Foco em saque curto", "icon": "shuttlecock", "status": "highlight" },
+    { "date": "20/11/2026", "title": "TREINO", "description": "Feriado — sem quadra", "icon": "shuttlecock", "status": "cancelled" },
+    { "date": "28/11/2026", "title": "TORNEIO INTERNO", "icon": "trophy" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "csb-render",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Generates the CSB monthly calendar art (PNG) from JSON",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "puppeteer": "^24.0.0" }
+}
